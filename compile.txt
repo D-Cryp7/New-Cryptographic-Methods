@@ -1,0 +1,2 @@
+g++ UQRMI.cpp ../rabin.cpp -lgmpxx -lgmp
+g++ UQR.cpp ../rabin.cpp -lgmpxx -lgmp
