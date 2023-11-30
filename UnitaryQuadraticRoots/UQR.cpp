@@ -38,17 +38,19 @@ int sign(mpz_class n, mpz_t y1, mpz_t y2, mpz_class m, mpz_t* c) {
 }
 
 bool verify(mpz_class n, mpz_class m, mpz_t c) {
-    mpz_t cc, ver;
-    mpz_init(cc);
-    mpz_init(ver);
+    mpz_class cc, m_pow_6, m_pow_5, m_pow_4, m_pow_3, m_pow_2;
 
-    mpz_mul(cc, c, c); // c^2
-    mpz_mod(cc, cc, n.get_mpz_t());
+    // Calculate powers efficiently using mpz_powm_ui for modulo n
+    mpz_powm_ui(cc.get_mpz_t(), c, 2, n.get_mpz_t());
+    mpz_powm_ui(m_pow_6.get_mpz_t(), m.get_mpz_t(), 6, n.get_mpz_t());
+    mpz_powm_ui(m_pow_5.get_mpz_t(), m.get_mpz_t(), 5, n.get_mpz_t());
+    mpz_powm_ui(m_pow_4.get_mpz_t(), m.get_mpz_t(), 4, n.get_mpz_t());
+    mpz_powm_ui(m_pow_3.get_mpz_t(), m.get_mpz_t(), 3, n.get_mpz_t());
+    mpz_powm_ui(m_pow_2.get_mpz_t(), m.get_mpz_t(), 2, n.get_mpz_t());
 
-    mpz_class rhs = m*m*m*m*m*m - 6*m*m*m*m*m + 15*m*m*m*m -20*m*m*m + 15*m*m - 6*m + 1; // right hand side
-    mpz_mod(ver, rhs.get_mpz_t(), n.get_mpz_t());
+    mpz_class ver = (m_pow_6 - 6 * m_pow_5 + 15 * m_pow_4 - 20 * m_pow_3 + 15 * m_pow_2 - 6 * m + 1) % n;
 
-    if (mpz_cmp(cc, ver) == 0) return true;
+    if (mpz_cmp(cc.get_mpz_t(), ver.get_mpz_t()) == 0) return true;
     else return false;
 }
 
@@ -89,19 +91,34 @@ int main(int argc, char* argv[]) {
 
         mpz_t s;
         mpz_init(s);
+        auto sign_start = chrono::high_resolution_clock::now();
+        auto sign_end = chrono::high_resolution_clock::now();
+        auto ver_start = chrono::high_resolution_clock::now();
+        auto ver_end = chrono::high_resolution_clock::now();
 
-        auto start = chrono::high_resolution_clock::now();
-        sign(n, r3, r4, m, &s);
-        auto end = chrono::high_resolution_clock::now();
-        cout << "Signature time: " << chrono::duration_cast<chrono::nanoseconds>(end - start).count() << "ns\n";
-        
-        start = chrono::high_resolution_clock::now();
-        bool verification = verify(n, m, s);
-        end = chrono::high_resolution_clock::now();
-        cout << "Verification time: " << chrono::duration_cast<chrono::nanoseconds>(end - start).count() << "ns\n";
+        for(int i = 0; i < 10000; i++){
+            sign_start = chrono::high_resolution_clock::now();
+            sign(n, r3, r4, m, &s);
+            sign_end = chrono::high_resolution_clock::now();
+            // cout << "Signature time: " << chrono::duration_cast<chrono::nanoseconds>(sign_end - sign_start).count() << "ns\n";
+            
+            ver_start = chrono::high_resolution_clock::now();
+            bool verification = verify(n, m, s);
+            ver_end = chrono::high_resolution_clock::now();
+            // cout << "Verification time: " << chrono::duration_cast<chrono::nanoseconds>(ver_end - ver_start).count() << "ns\n";
 
-        cout << "signature " << s << "\n";
-        cout << "verify " << verification << "\n";
+            // cout << "signature " << s << "\n";
+            // cout << "verify " << verification << "\n";
+
+            ofstream outFile(filename.substr(3, 4) + "_time_results.txt", ios::app);
+            if (outFile.is_open()) {
+                outFile << "(" << chrono::duration_cast<chrono::nanoseconds>(sign_end - sign_start).count() << ", ";
+                outFile << chrono::duration_cast<chrono::nanoseconds>(ver_end - ver_start).count() << ")" << endl;
+                outFile.close();
+            } else {
+                cerr << "Unable to create or open the file." << endl;
+            }
+        }
     }
 
     return 0;
