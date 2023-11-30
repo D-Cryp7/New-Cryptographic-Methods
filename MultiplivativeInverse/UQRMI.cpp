@@ -1,9 +1,29 @@
 #include "../rabin.h"
 #include <iostream>
+#include <fstream>
 #include <gmpxx.h>
+#include <string>
 #include <chrono>
 
 using namespace std;
+
+bool read_file(const string& filename, string& p, string& q, string& m, string& x, string& xx, string& xx_inv) {
+    ifstream file(filename);
+
+    if (!file.is_open()) {
+        cerr << "Unable to open the file " << filename << endl;
+        return false;
+    }
+
+    if (!(file >> p >> q >> m >> x >> xx >> xx_inv)) {
+        cerr << "Error reading numbers from the file." << endl;
+        file.close();
+        return false;
+    }
+
+    file.close();
+    return true;
+}
 
 int sign(mpz_class n, mpz_class x, mpz_class m, mpz_t* c) {
     mpz_class exp{"3"};
@@ -38,49 +58,61 @@ bool verify(mpz_class n, mpz_class m, mpz_t c, mpz_class xx, mpz_class xx_inv) {
     else return false;
 }
 
-int main() {
-    mpz_class p{"109026040621161452594025497836680861802534281730394140002371179458964657129700176801446176507554210077052835471226105923870687559284502333509648461513725730062670760907457042040738837080427325016894830164228603220867733094527227125044245018472888028364512986853864174996319534121644398359766733914429864709961"};
-    mpz_class q{"113197702091728559608979782791539933446334660335869257813634629981436788529276518451670986454045751295891386770190106142954710351522156266622709125914124859317862471342767449062799189204783429001620854503649142148491792534170018491689276955542092134515214775942340611363773930802274552448445026561852200522189"};
-    mpz_class x{"8422400964820270108009029382457039217783746034630111658418475959179128596108381829100562564965023028659888153074051050716523206336775675901056401188834626438397497197495871166009268358166744157374026325426281152264551806627632172865483630690324263165775406614880589758687638144036082427957948350814354445012525917039297588938321321677273760905041264445955493320594283278254085179139111714101739693460337270392123060311043325750638718445347001923343700844155747002130399959910100549997490061620231405024080247534917323357148151217373133025072951737400393997753123648126720758823398930690576855509502655660312995607582"};
-    mpz_class xx{"9913078751969376174538419185793503967036966137790963406333958467176734025840798495066065219050388896262451333164388225501749851304681773682556676289233660145103218340482944644371951341364357288126343270743732409497219312387361204707890460554014462309414541073780698975364488344632342808931179575061380505168560999306937008063537119735421925416675419032316327498713404064762290789150583406451724132276290389367435352232681685729271651730561729214140623229056313190795003060848575009299315070587674905189068950314641438361246851527946505523132375074233620850442288403960372008558065653495969960506765683764400955485074"};
-    mpz_class xx_inv{"7610771947596670533052796859306629903147187898783194823591311881810667626640365247526924692868396083053720123366782285744372406274304871069937471159792604124236126030568386886861108360883344287616775966899973333864166865392806039928109669000192654523908755338059568809282403088994123361525588880642903244337235402483993520427283911178931248656482297828123999177083222168418055655645188050630075447839216572983471860963144459016605056685481148600018242159349004220498799797465132862927818717354988928230850881942821929515183218984780579713358995776747483254274487440227721852243137848326457673379589877121009358480899"};
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        cerr << "Usage: " << argv[0] << " <filename>" << endl;
+        return 1;
+    }
 
-    mpz_class n = p * q;
+    string filename = argv[1];
+    string pp, qq, mm, nonce, nonce_squared, nonce_squared_inverse;
 
-    mpz_t r1, r2, r3, r4;
-    mpz_init(r1);
-    mpz_init(r2);
-    mpz_init(r3);
-    mpz_init(r4);
+    if (read_file(filename, pp, qq, mm, nonce, nonce_squared, nonce_squared_inverse)) {
+        mpz_class p{pp};
+        mpz_class q{qq};
+        mpz_class m{mm};
+        mpz_class x{nonce};
+        mpz_class xx{nonce_squared};
+        mpz_class xx_inv{nonce_squared_inverse};
 
-    mpz_class c{"1"};
+        mpz_class n = p * q;
 
-    rabin_square_roots(c, n, p, q, &r1, &r2, &r3, &r4);
+        mpz_t r1, r2, r3, r4;
+        mpz_init(r1);
+        mpz_init(r2);
+        mpz_init(r3);
+        mpz_init(r4);
 
-    cout << "p " << p << "\n";
-    cout << "q " << q << "\n";
-    cout << "n " << n << "\n";
-    cout << "r1 " << r1 << "\n";
-    cout << "r2 " << r2 << "\n";
-    cout << "r3 " << r3 << "\n";
-    cout << "r4 " << r4 << "\n";
+        mpz_class c{"1"};
 
-    mpz_class m{"1946536587464453183016553848187676538276828860871122657249572479508861"}; // H3xTEL{Unitary_Square_Roots!}
-    mpz_t s;
-    mpz_init(s);
+        rabin_square_roots(c, n, p, q, &r1, &r2, &r3, &r4);
 
-    auto start = chrono::high_resolution_clock::now();
-    sign(n, x, m, &s);
-    auto end = chrono::high_resolution_clock::now();
-    cout << "Signature time: " << chrono::duration_cast<chrono::nanoseconds>(end - start).count() << "ns\n";
+        /*
+        cout << "p " << p << "\n";
+        cout << "q " << q << "\n";
+        cout << "n " << n << "\n";
+        cout << "r1 " << r1 << "\n";
+        cout << "r2 " << r2 << "\n";
+        cout << "r3 " << r3 << "\n";
+        cout << "r4 " << r4 << "\n";
+        */
 
-    start = chrono::high_resolution_clock::now();
-    bool verification = verify(n, m, s, xx, xx_inv);
-    end = chrono::high_resolution_clock::now();
-    cout << "Verification time: " << chrono::duration_cast<chrono::nanoseconds>(end - start).count() << "ns\n";
-    
-    cout << "signature " << s << "\n";
-    cout << "verify " << verification << "\n";
+        mpz_t s;
+        mpz_init(s);
+
+        auto start = chrono::high_resolution_clock::now();
+        sign(n, x, m, &s);
+        auto end = chrono::high_resolution_clock::now();
+        cout << "Signature time: " << chrono::duration_cast<chrono::nanoseconds>(end - start).count() << "ns\n";
+
+        start = chrono::high_resolution_clock::now();
+        bool verification = verify(n, m, s, xx, xx_inv);
+        end = chrono::high_resolution_clock::now();
+        cout << "Verification time: " << chrono::duration_cast<chrono::nanoseconds>(end - start).count() << "ns\n";
+        
+        cout << "signature " << s << "\n";
+        cout << "verify " << verification << "\n";
+    }
 
     return 0;
 }
